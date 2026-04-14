@@ -1,0 +1,72 @@
+# STF-Net Default Configuration
+# All hyperparameters match those reported in the manuscript.
+
+model:
+  embed_dim: 512          # Shared embedding dimension D for CMAF
+  cmaf_heads: 8           # Number of attention heads in CMAF
+  cmaf_dk: 64             # Key/query dimension per head
+  spatial_resolution: 14  # H_bar = W_bar after adaptive pooling (14x14 = 196 tokens)
+  bilstm_hidden: 256      # Hidden units per direction in Bi-LSTM (512 total)
+  bilstm_layers: 2        # Number of stacked Bi-LSTM layers
+  bilstm_dropout: 0.5     # Dropout between Bi-LSTM layers
+  n_artifact_detectors: 4 # Number of ArtifactDetector heads in AALF
+  artifact_channels: 128  # Channels in each ArtifactDetector
+
+training:
+  seed: 42                # Base seed (code runs 10 seeds: 42..51)
+  n_seeds: 10
+  epochs: 50
+  warmup_epochs: 3
+  batch_size_per_gpu: 16  # 4 GPUs => effective batch 64
+  lr: 2.0e-4
+  lr_min: 1.0e-6
+  weight_decay: 1.0e-4
+  grad_clip: 1.0
+  freeze_backbone_epochs: 10   # Freeze EfficientNetV2L + XceptionNet for first N epochs
+
+  # AALF hyperparameters
+  lambda_aalf: 0.1        # Weight of regularization term R in AALF
+  w_real: 1.0             # Weight for real class in AALF
+  w_fake: 2.0             # Weight for fake class in AALF
+  diversity_weight: 0.01  # Pairwise cosine dissimilarity penalty for ArtifactDetectors
+  frozen_eval_interval: 500   # Every N iters, briefly freeze detectors to verify independence
+
+data:
+  train_frames: 16        # T during training (uniform temporal sampling)
+  infer_frames: 32        # T during inference
+  face_size: 224          # Face crop size (H x W)
+  ffpp_subset: "c23"      # FF++ compression: c23 (HQ) or c40
+  ffpp_split:
+    train: 720
+    val: 140
+    test: 140
+
+augmentation:
+  horizontal_flip_p: 0.5
+  rotation_degrees: 10
+  color_jitter:
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.1
+    hue: 0.0
+  gaussian_blur_p: 0.3
+  gaussian_blur_kernel: [3, 7]
+  jpeg_compress_p: 0.5
+  jpeg_quality: [60, 95]
+
+acs:
+  tau_low: 0.3            # Complexity threshold: route to lightweight path if below
+  tau_high: 0.7           # Complexity threshold: route to full model if above
+  confidence_gate: 0.55   # If classifier sigmoid < this, force full-model path
+  estimator_lr: 1.0e-3
+  estimator_epochs: 20
+  estimator_batch_size: 64
+  ssim_frames: 5          # Number of consecutive frame pairs for SSIM proxy label
+
+paths:
+  ffpp_root: "data/raw/FaceForensics++"
+  dfdc_root: "data/raw/DFDC"
+  processed_root: "data/processed"
+  checkpoints: "checkpoints"
+  logs: "logs"
+  complexity_labels: "data/complexity_labels"
